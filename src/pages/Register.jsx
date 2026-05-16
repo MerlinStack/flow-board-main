@@ -1,9 +1,10 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { Mail, Lock, Eye, EyeOff, User, CheckCircle2, AlertCircle, Shield, Send, MessageCircle } from 'lucide-react';
 
 export default function Register() {
+  // Initialize all state with proper default values
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -26,7 +27,7 @@ export default function Register() {
 
   // Simulate sending verification email
   const sendVerificationEmail = async (userEmail, userName, code) => {
-    // In a real app, this would call your backend API
+    const safeName = userName || 'User';
     console.log(`
       =========================================
       📧 VERIFICATION EMAIL SIMULATION
@@ -34,7 +35,7 @@ export default function Register() {
       To: ${userEmail}
       Subject: Verify Your FlowBoard Account
       
-      Hello ${userName}!
+      Hello ${safeName}!
       
       Your verification code is: ${code}
       
@@ -46,35 +47,57 @@ export default function Register() {
       =========================================
     `);
     
-    // Show alert for demo purposes
     alert(`📧 DEMO MODE\n\nA verification email would be sent to:\n${userEmail}\n\nVerification Code: ${code}\n\n(Check your browser console for full details)`);
     
     return true;
   };
 
   const handleSendVerification = async () => {
-    // First, validate the form
-    if (!name || !email || !password || password !== confirmPassword) {
-      setErrors({
-        name: !name ? 'Name is required' : '',
-        email: !email ? 'Email is required' : '',
-        password: !password ? 'Password is required' : '',
-        confirmPassword: password !== confirmPassword ? 'Passwords do not match' : ''
-      });
-      return;
+    const newErrors = {};
+    
+    // Safe name validation - FIXED
+    const trimmedName = name ? name.trim() : '';
+    if (!trimmedName) {
+      newErrors.name = 'Name is required';
+    } else if (trimmedName.length < 2) {
+      newErrors.name = 'Name must be at least 2 characters';
     }
     
-    // Validate email format
-    const emailRegex = /^[^\s@]+@([^\s@]+\.)+[^\s@]+$/;
-    if (!emailRegex.test(email)) {
-      setErrors({ ...errors, email: 'Please enter a valid email address' });
-      return;
+    // Email validation
+    if (!email) {
+      newErrors.email = 'Email is required';
+    } else {
+      const emailRegex = /^[^\s@]+@([^\s@]+\.)+[^\s@]+$/;
+      if (!emailRegex.test(email)) {
+        newErrors.email = 'Please enter a valid email address';
+      }
     }
     
-    // Validate password strength
-    const isStrong = password.length >= 8 && /[A-Z]/.test(password) && /[a-z]/.test(password) && /\d/.test(password) && /[!@#$%^&*(),.?":{}|<>]/.test(password);
-    if (!isStrong) {
-      setErrors({ ...errors, password: 'Password does not meet requirements' });
+    // Password validation
+    if (!password) {
+      newErrors.password = 'Password is required';
+    } else {
+      const hasMinLength = password.length >= 8;
+      const hasUppercase = /[A-Z]/.test(password);
+      const hasLowercase = /[a-z]/.test(password);
+      const hasNumber = /\d/.test(password);
+      const hasSpecial = /[!@#$%^&*(),.?":{}|<>]/.test(password);
+      
+      if (!hasMinLength || !hasUppercase || !hasLowercase || !hasNumber || !hasSpecial) {
+        newErrors.password = 'Password does not meet requirements';
+      }
+    }
+    
+    // Confirm password validation
+    if (!confirmPassword) {
+      newErrors.confirmPassword = 'Please confirm your password';
+    } else if (password !== confirmPassword) {
+      newErrors.confirmPassword = 'Passwords do not match';
+    }
+    
+    setErrors(newErrors);
+    
+    if (Object.keys(newErrors).length > 0) {
       return;
     }
     
@@ -82,7 +105,7 @@ export default function Register() {
     const code = generateVerificationCode();
     setVerificationCode(code);
     
-    await sendVerificationEmail(email, name, code);
+    await sendVerificationEmail(email, trimmedName, code);
     setShowVerificationModal(true);
   };
 
@@ -91,9 +114,10 @@ export default function Register() {
       setVerificationError('');
       setShowVerificationModal(false);
       
-      // Proceed with registration
       setLoading(true);
-      const success = await register(name, email, password);
+      const trimmedName = name ? name.trim() : '';
+      // Pass name, email, password to register function
+      const success = await register(trimmedName, email, password);
       setLoading(false);
       
       if (success) {
@@ -107,11 +131,17 @@ export default function Register() {
   const handleResendCode = async () => {
     const code = generateVerificationCode();
     setVerificationCode(code);
-    await sendVerificationEmail(email, name, code);
+    const trimmedName = name ? name.trim() : 'User';
+    await sendVerificationEmail(email, trimmedName, code);
     setVerificationError('');
   };
 
-  const passwordStrength = (() => {
+  // Password strength calculation - FIXED: handle empty/undefined password
+  const getPasswordStrength = () => {
+    if (!password || password === '') {
+      return { strength: 'weak', passedChecks: 0, checks: { length: false, uppercase: false, lowercase: false, number: false, special: false } };
+    }
+    
     const checks = {
       length: password.length >= 8,
       uppercase: /[A-Z]/.test(password),
@@ -120,9 +150,11 @@ export default function Register() {
       special: /[!@#$%^&*(),.?":{}|<>]/.test(password),
     };
     const passedChecks = Object.values(checks).filter(Boolean).length;
-    return { checks, strength: passedChecks === 5 ? 'strong' : passedChecks >= 3 ? 'medium' : 'weak', passedChecks };
-  })();
+    const strength = passedChecks === 5 ? 'strong' : passedChecks >= 3 ? 'medium' : 'weak';
+    return { checks, strength, passedChecks };
+  };
 
+  const passwordStrength = getPasswordStrength();
   const isPasswordStrong = passwordStrength.strength === 'strong';
 
   return (
@@ -276,7 +308,7 @@ export default function Register() {
                     {showConfirmPassword ? <EyeOff size={20} /> : <Eye size={20} />}
                   </button>
                 </div>
-                {confirmPassword && password === confirmPassword && (
+                {confirmPassword && password === confirmPassword && !errors.confirmPassword && (
                   <p className="text-success-600 text-caption mt-1.5 flex items-center gap-1">
                     <CheckCircle2 size={14} /> Passwords match
                   </p>

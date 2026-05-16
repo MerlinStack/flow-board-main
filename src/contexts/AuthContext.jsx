@@ -50,7 +50,6 @@ export function AuthProvider({ children }) {
     const token = localStorage.getItem('token');
     const userStr = localStorage.getItem('user');
 
-    // Only try to parse if userStr exists and is not null/undefined
     if (token && userStr && userStr !== 'undefined') {
       try {
         const user = JSON.parse(userStr);
@@ -60,7 +59,6 @@ export function AuthProvider({ children }) {
         });
       } catch (error) {
         console.error('Failed to parse user from localStorage:', error);
-        // Clear invalid data
         localStorage.removeItem('token');
         localStorage.removeItem('user');
         dispatch({ type: 'SET_LOADING', payload: false });
@@ -70,12 +68,12 @@ export function AuthProvider({ children }) {
     }
   }, []);
 
-  const register = async (email, password) => {
+  // FIXED: Changed from (email, password) to (name, email, password)
+  const register = async (name, email, password) => {
     try {
-      const response = await authAPI.register(email, password);
+      const response = await authAPI.register(name, email, password);
       const data = response.data;
 
-      // Validate data before storing
       if (!data || !data.token || !data.user) {
         throw new Error('Invalid response from server');
       }
@@ -99,7 +97,6 @@ export function AuthProvider({ children }) {
       const response = await authAPI.login(email, password);
       const data = response.data;
 
-      // Validate data before storing
       if (!data || !data.token || !data.user) {
         throw new Error('Invalid response from server');
       }
