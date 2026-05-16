@@ -1,7 +1,6 @@
 import { api } from "./api";
 
 export const authService = {
-  // POST /auth/register
   register: async (userData) => {
     return await api("/auth/register", {
       method: "POST",
@@ -10,7 +9,6 @@ export const authService = {
     });
   },
 
-  // POST /auth/login
   login: async (credentials) => {
     return await api("/auth/login", {
       method: "POST",
@@ -19,7 +17,6 @@ export const authService = {
     });
   },
 
-  // GET /auth/me
   getMe: async () => {
     return await api("/auth/me", { method: "GET" });
   },
