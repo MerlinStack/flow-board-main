@@ -12,11 +12,21 @@ export default function Login() {
   const { login } = useAuth();
   const navigate = useNavigate();
 
+  const validateEmail = (email) => {
+    if (!email) return 'Email is required';
+    const emailRegex = /^[^\s@]+@([^\s@]+\.)+[^\s@]+$/;
+    if (!emailRegex.test(email)) return 'Please enter a valid email address';
+    return null;
+  };
+
   const validateForm = () => {
     const newErrors = {};
-    if (!email) newErrors.email = 'Email is required';
-    else if (!/\S+@\S+\.\S+/.test(email)) newErrors.email = 'Email is invalid';
+    
+    const emailError = validateEmail(email);
+    if (emailError) newErrors.email = emailError;
+    
     if (!password) newErrors.password = 'Password is required';
+    
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -35,12 +45,10 @@ export default function Login() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary-50 via-white to-primary-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 p-4">
-      {/* Decorative elements */}
       <div className="absolute top-0 left-0 w-96 h-96 bg-primary-100 dark:bg-primary-900 opacity-20 rounded-full blur-3xl -z-10 animate-fade-in" />
       <div className="absolute bottom-0 right-0 w-96 h-96 bg-secondary-100 dark:bg-secondary-900 opacity-20 rounded-full blur-3xl -z-10 animate-fade-in" />
 
       <div className="w-full max-w-md animate-slide-up">
-        {/* Card */}
         <div className="card shadow-elevation-6 p-8">
           {/* Header */}
           <div className="text-center mb-8">
@@ -142,9 +150,8 @@ export default function Login() {
             Create Account
           </Link>
 
-          {/* Footer */}
           <p className="text-caption text-center text-gray-500 dark:text-gray-500 mt-6">
-            Demo: Use any email/password
+            Enter your registered email and password
           </p>
         </div>
       </div>

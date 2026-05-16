@@ -2,61 +2,69 @@
 const STORAGE_KEY = 'flowboard_tasks'
 const USERS_KEY = 'flowboard_users'
 
-// Initialize mock data
+// Initialize mock data - NO DUMMY TASKS!
 const initMockData = () => {
+  // Initialize default user if none exists
   if (!localStorage.getItem(USERS_KEY)) {
     const defaultUser = {
       id: '1',
-      email: 'demo@example.com',
-      password: 'demo123'
+      name: 'Demo User',
+      email: 'demo@flowboard.com',
+      password: 'Demo@1234'  // Strong password example
     }
     localStorage.setItem(USERS_KEY, JSON.stringify([defaultUser]))
   }
   
+  // Initialize empty tasks array - NO SAMPLE TASKS!
   if (!localStorage.getItem(STORAGE_KEY)) {
-    // Add some sample tasks
-    const sampleTasks = [
-      {
-        id: '1',
-        title: 'Welcome to FlowBoard!',
-        description: 'This is a sample task. Try creating, editing, and deleting tasks.',
-        priority: 'high',
-        status: 'pending',
-        dueDate: new Date(Date.now() + 86400000).toISOString().split('T')[0],
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      },
-      {
-        id: '2',
-        title: 'Try filtering tasks',
-        description: 'Use the filters in the sidebar to sort by status and priority',
-        priority: 'medium',
-        status: 'in-progress',
-        dueDate: new Date(Date.now() + 172800000).toISOString().split('T')[0],
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      },
-      {
-        id: '3',
-        title: 'Mark me as complete',
-        description: 'Click the Complete button to change my status',
-        priority: 'low',
-        status: 'pending',
-        dueDate: new Date(Date.now() - 86400000).toISOString().split('T')[0],
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      }
-    ]
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(sampleTasks))
+    localStorage.setItem(STORAGE_KEY, JSON.stringify([]))
   }
 }
 
+// Helper to validate email format
+const isValidEmail = (email) => {
+  const emailRegex = /^[^\s@]+@([^\s@]+\.)+[^\s@]+$/;
+  return emailRegex.test(email);
+};
+
+// Helper to validate password strength
+const isStrongPassword = (password) => {
+  const hasMinLength = password.length >= 8;
+  const hasUppercase = /[A-Z]/.test(password);
+  const hasLowercase = /[a-z]/.test(password);
+  const hasNumber = /\d/.test(password);
+  const hasSpecial = /[!@#$%^&*(),.?":{}|<>]/.test(password);
+  return hasMinLength && hasUppercase && hasLowercase && hasNumber && hasSpecial;
+};
+
 // Mock auth functions
 export const mockAuthAPI = {
-  register: async (email, password) => {
+  register: async (name, email, password) => {
     initMockData()
+    
+    // Validate email format
+    if (!isValidEmail(email)) {
+      throw { 
+        response: { 
+          data: { message: 'Please enter a valid email address' },
+          status: 400
+        } 
+      }
+    }
+    
+    // Validate password strength
+    if (!isStrongPassword(password)) {
+      throw { 
+        response: { 
+          data: { message: 'Password must be at least 8 characters with uppercase, lowercase, number, and special character' },
+          status: 400
+        } 
+      }
+    }
+    
     const users = JSON.parse(localStorage.getItem(USERS_KEY) || '[]')
     
+    // Check if user already exists
     if (users.find(u => u.email === email)) {
       throw { 
         response: { 
@@ -66,8 +74,10 @@ export const mockAuthAPI = {
       }
     }
     
+    // Create new user
     const newUser = {
       id: Date.now().toString(),
+      name,
       email,
       password
     }
@@ -75,7 +85,8 @@ export const mockAuthAPI = {
     users.push(newUser)
     localStorage.setItem(USERS_KEY, JSON.stringify(users))
     
-    const token = btoa(JSON.stringify({ id: newUser.id, email: newUser.email }))
+    // Generate token
+    const token = btoa(JSON.stringify({ id: newUser.id, email: newUser.email, name: newUser.name }))
     const { password: _, ...userWithoutPassword } = newUser
     
     return { data: { token, user: userWithoutPassword } }
@@ -83,6 +94,17 @@ export const mockAuthAPI = {
   
   login: async (email, password) => {
     initMockData()
+    
+    // Validate email format
+    if (!isValidEmail(email)) {
+      throw { 
+        response: { 
+          data: { message: 'Please enter a valid email address' },
+          status: 400
+        } 
+      }
+    }
+    
     const users = JSON.parse(localStorage.getItem(USERS_KEY) || '[]')
     const user = users.find(u => u.email === email && u.password === password)
     
@@ -95,10 +117,15 @@ export const mockAuthAPI = {
       }
     }
     
-    const token = btoa(JSON.stringify({ id: user.id, email: user.email }))
+    // Generate token
+    const token = btoa(JSON.stringify({ id: user.id, email: user.email, name: user.name }))
     const { password: _, ...userWithoutPassword } = user
     
     return { data: { token, user: userWithoutPassword } }
+  },
+  
+  logout: async () => {
+    return { data: { success: true } }
   }
 }
 
@@ -107,7 +134,7 @@ export const mockTasksAPI = {
   getAll: async () => {
     initMockData()
     const tasks = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]')
-    return { data: { tasks } } // Return in expected format
+    return { data: { tasks } }
   },
   
   create: async (taskData) => {
