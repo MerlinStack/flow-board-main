@@ -1,70 +1,35 @@
-import client from "./api.js";
-import * as mockApi from "./mockApi.js";
+import api from './api'
+import { mockTasksAPI } from './mockApi'
 
-const isDev = import.meta.env.DEV;
+// Change this to false when your real backend is ready
+const USE_MOCK_API = true
 
-export async function listTasks(params = {}) {
-  if (isDev) {
-    const token = localStorage.getItem("fb_token");
-    return mockApi.listTasks(token, params);
-  }
-
-  const res = await client.get("/tasks", { params });
-  return res.data;
-}
-
-export async function getTask(id) {
-  if (isDev) {
-    const token = localStorage.getItem("fb_token");
-    return mockApi.getTask(token, id);
-  }
-
-  const res = await client.get(`/tasks/${id}`);
-  return res.data;
-}
-
-export async function createTask(data) {
-  if (isDev) {
-    const token = localStorage.getItem("fb_token");
-    return mockApi.createTask(token, data);
-  }
-
-  const res = await client.post("/tasks", data);
-  return res.data;
-}
-
-export async function updateTask(id, data) {
-  if (isDev) {
-    const token = localStorage.getItem("fb_token");
-    return mockApi.updateTask(token, id, data);
-  }
-
-  const res = await client.put(`/tasks/${id}`, data);
-  return res.data;
-}
-
-export async function updateTaskStatus(id, status) {
-  if (isDev) {
-    const token = localStorage.getItem("fb_token");
-    return mockApi.updateTaskStatus(token, id, status);
-  }
-
-  // Try PATCH /status first, fall back to PUT
-  try {
-    const res = await client.patch(`/tasks/${id}/status`, { status });
-    return res.data;
-  } catch {
-    const res = await client.put(`/tasks/${id}`, { status });
-    return res.data;
+// Main tasksAPI export
+export const tasksAPI = USE_MOCK_API ? mockTasksAPI : {
+  getAll: async () => {
+    const response = await api.get('/tasks')
+    return response
+  },
+  create: async (taskData) => {
+    const response = await api.post('/tasks', taskData)
+    return response
+  },
+  update: async (id, taskData) => {
+    const response = await api.put(`/tasks/${id}`, taskData)
+    return response
+  },
+  delete: async (id) => {
+    const response = await api.delete(`/tasks/${id}`)
+    return response
+  },
+  updateStatus: async (id, status) => {
+    const response = await api.patch(`/tasks/${id}/status`, { status })
+    return response
   }
 }
 
-export async function deleteTask(id) {
-  if (isDev) {
-    const token = localStorage.getItem("fb_token");
-    return mockApi.deleteTask(token, id);
-  }
+// Alias for compatibility with different imports
+export const taskService = tasksAPI
 
-  const res = await client.delete(`/tasks/${id}`);
-  return res.data;
-}
+// Default export for convenience
+export default tasksAPI

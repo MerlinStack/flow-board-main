@@ -1,70 +1,127 @@
-import { taskService } from "../services/tasks";
+import { useState } from 'react'
+import { format } from 'date-fns'
+import { useTasks } from '../contexts/TaskContext'
+import ConfirmDialog from './ConfirmDialog'
 
-export default function TaskCard({ task, onRefresh }) {
-  const priorityColors = {
-    high: "bg-rose-500/10 text-rose-400 border-rose-500/20",
-    medium: "bg-amber-500/10 text-amber-400 border-amber-500/20",
-    low: "bg-emerald-500/10 text-emerald-400 border-emerald-500/20",
-  };
+const priorityColors = {
+  high: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200',
+  medium: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200',
+  low: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
+}
 
-  const handleToggleStatus = async () => {
-    try {
-      const nextStatus = task.status === "completed" ? "pending" : "completed";
-      await taskService.updateTaskStatus(task.id, nextStatus);
-      onRefresh();
-    } catch {
-      alert("Failed to update task status");
-    }
-  };
+const statusColors = {
+  pending: 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200',
+  'in-progress': 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200',
+  completed: 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200',
+}
+
+export default function TaskCard({ task, onEdit }) {
+  const { updateTask, deleteTask } = useTasks()
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [showMoreMenu, setShowMoreMenu] = useState(false)
+  const isCompleted = task.status === 'completed'
+
+  const handleStatusChange = async (newStatus) => {
+    await updateTask(task.id, { ...task, status: newStatus })
+  }
 
   const handleDelete = async () => {
-    if (!window.confirm(`Delete task "${task.title}"?`)) return;
-    try {
-      await taskService.deleteTask(task.id);
-      onRefresh();
-    } catch {
-      alert("Failed to delete task");
-    }
-  };
+    await deleteTask(task.id)
+    setShowDeleteConfirm(false)
+  }
 
   return (
-    <div
-      className={`p-5 bg-slate-800/60 rounded-xl border border-slate-700/50 backdrop-blur-sm transition-all hover:border-slate-600 ${task.status === "completed" ? "opacity-60" : ""}`}
-    >
-      <div className="flex items-start justify-between gap-4 mb-3">
-        <h3
-          className={`font-semibold text-slate-100 text-base leading-snug ${task.status === "completed" ? "line-through text-slate-500" : ""}`}
-        >
-          {task.title}
-        </h3>
-        <span
-          className={`text-xs px-2.5 py-0.5 rounded-full font-medium border ${priorityColors[task.priority] || priorityColors.low}`}
-        >
-          {task.priority}
-        </span>
-      </div>
-
-      <p className="text-slate-400 text-sm mb-4 line-clamp-2 h-10">
-        {task.description || "No description provided."}
-      </p>
-
-      <div className="flex items-center justify-between border-t border-slate-700/50 pt-3 text-xs text-slate-400">
-        <span>Due: {task.dueDate || "No date"}</span>
-        <div className="flex items-center gap-2">
-          <button
-            onClick={handleToggleStatus}
-            className={`px-3 py-1.5 rounded-lg font-medium transition ${task.status === "completed" ? "bg-slate-700 hover:bg-slate-600 text-slate-300" : "bg-[#1F6FEB] hover:bg-blue-600 text-white"}`}
-          >
-            {task.status === "completed" ? "Reopen" : "Complete"}
-          </button>
-          <button
-            onClick={handleDelete}
-            className="p-1.5 hover:bg-rose-500/10 text-slate-400 hover:text-rose-400 rounded-lg transition"
-          >
-            Delete
-          </button>
+    <>
+      <div className={`bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4 hover:shadow-md transition-shadow ${isCompleted ? 'opacity-75' : ''}`}>
+        <div className="flex items-start justify-between mb-2">
+          <h3 className={`font-semibold text-lg text-gray-900 dark:text-white ${isCompleted ? 'line-through text-gray-500 dark:text-gray-400' : ''}`}>
+            {task.title}
+          </h3>
+          <div className="flex gap-2">
+            {!isCompleted && (
+              <button
+                onClick={onEdit}
+                className="text-gray-500 hover:text-primary-500 dark:text-gray-400"
+                title="Edit task"
+              >
+                ✏️
+              </button>
+            )}
+            <button
+              onClick={() => setShowDeleteConfirm(true)}
+              className="text-gray-500 hover:text-red-500 dark:text-gray-400"
+              title="Delete task"
+            >
+              🗑️
+            </button>
+          </div>
+        </div>
+        
+        {task.description && (
+          <p className={`text-gray-600 dark:text-gray-300 text-sm mb-3 ${isCompleted ? 'line-through text-gray-400 dark:text-gray-500' : ''}`}>
+            {task.description}
+          </p>
+        )}
+        
+        <div className="flex flex-wrap gap-2 mb-3">
+          <span className={`px-2 py-1 rounded-full text-xs font-medium ${priorityColors[task.priority]}`}>
+            {task.priority}
+          </span>
+          <span className={`px-2 py-1 rounded-full text-xs font-medium ${statusColors[task.status]}`}>
+            {task.status}
+          </span>
+        </div>
+        
+        {task.dueDate && (
+          <div className={`text-xs mb-3 ${isCompleted ? 'text-gray-400 dark:text-gray-500' : 'text-gray-500 dark:text-gray-400'}`}>
+            Due: {format(new Date(task.dueDate), 'MMM dd, yyyy')}
+          </div>
+        )}
+        
+        <div className="flex gap-2">
+          {!isCompleted ? (
+            <>
+              {task.status === 'pending' && (
+                <button
+                  onClick={() => handleStatusChange('in-progress')}
+                  className="text-sm px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors"
+                >
+                  Start
+                </button>
+              )}
+              {task.status === 'in-progress' && (
+                <button
+                  onClick={() => handleStatusChange('completed')}
+                  className="text-sm px-3 py-1 bg-purple-500 text-white rounded hover:bg-purple-600 transition-colors"
+                >
+                  Complete
+                </button>
+              )}
+              <button
+                onClick={() => handleStatusChange('pending')}
+                className="text-sm px-3 py-1 bg-gray-500 text-white rounded hover:bg-gray-600 transition-colors"
+              >
+                Reset
+              </button>
+            </>
+          ) : (
+            <button
+              onClick={() => handleStatusChange('pending')}
+              className="text-sm px-3 py-1 bg-gray-500 text-white rounded hover:bg-gray-600 transition-colors"
+            >
+              Reopen Task
+            </button>
+          )}
         </div>
       </div>
-    </div>
-  );
+      
+      <ConfirmDialog
+        isOpen={showDeleteConfirm}
+        onClose={() => setShowDeleteConfirm(false)}
+        onConfirm={handleDelete}
+        title="Delete Task"
+        message={`Are you sure you want to delete "${task.title}"? This action cannot be undone.`}
+      />
+    </>
+  )
 }

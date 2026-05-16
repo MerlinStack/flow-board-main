@@ -1,32 +1,15 @@
-import client from "./api.js";
-import * as mockApi from "./mockApi.js";
+import { mockAuthAPI } from './mockApi'
 
-const isDev = import.meta.env.DEV;
+// Change this to false when your real backend is ready
+const USE_MOCK_API = true
 
-export async function register(data) {
-  if (isDev) {
-    return mockApi.register(data);
-  }
-
-  const res = await client.post("/auth/register", data);
-  return res.data;
-}
-
-export async function login(data) {
-  if (isDev) {
-    return mockApi.login(data);
-  }
-
-  const res = await client.post("/auth/login", data);
-  return res.data;
-}
-
-export async function getMe() {
-  if (isDev) {
-    const token = localStorage.getItem("fb_token");
-    return mockApi.getMe(token);
-  }
-
-  const res = await client.get("/auth/me");
-  return res.data;
+export const authAPI = USE_MOCK_API ? mockAuthAPI : {
+  register: async (email, password) => {
+    const response = await api.post('/auth/register', { email, password })
+    return response.data
+  },
+  login: async (email, password) => {
+    const response = await api.post('/auth/login', { email, password })
+    return response.data
+  },
 }
