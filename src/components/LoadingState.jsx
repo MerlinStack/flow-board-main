@@ -1,0 +1,10 @@
+export default function LoadingState() {
+  return (
+    <div className="flex flex-col items-center justify-center min-h-[400px] w-full space-y-4">
+      <div className="w-12 h-12 border-4 border-[#1F6FEB] border-t-transparent rounded-full animate-spin"></div>
+      <p className="text-slate-400 font-medium animate-pulse text-sm">
+        Loading data from FlowBoard...
+      </p>
+    </div>
+  );
+}
